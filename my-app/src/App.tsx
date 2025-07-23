@@ -1,12 +1,14 @@
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+import { useState } from 'react'
 import './App.css'
+import NavBar from './componentes/NavBar'
 
 function App() {
 
 
   return (
-    <h2>Desafio</h2>
+    <>
+      <NavBar />
+    </>
   )
 }
 
