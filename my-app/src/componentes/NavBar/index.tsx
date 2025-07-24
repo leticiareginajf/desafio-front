@@ -13,15 +13,13 @@ import MenuIcon from '@mui/icons-material/Menu';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
-import MovieCard from '../MovieCard/MovieCard';
-import Grid from '../Grid';
-import TMDB from '../TMDB';
 
 interface Props {
   window?: () => Window;
 }
 
 const drawerWidth = 240;
+
 
 export default function DrawerAppBar(props: Props) {
   const { window } = props;
@@ -34,7 +32,7 @@ export default function DrawerAppBar(props: Props) {
   const drawer = (
     <Box onClick={handleDrawerToggle} sx={{ textAlign: 'center' }}>
       <Typography variant="h6" sx={{ my: 2 }}>
-        TMDB
+        MUI
       </Typography>
       <Divider />
     </Box>
@@ -84,9 +82,6 @@ export default function DrawerAppBar(props: Props) {
       </nav>
       <Box component="main" sx={{ p: 3 }}>
         <Toolbar />
-        <Typography>
-          <TMDB />
-        </Typography>
       </Box>
     </Box>
   );
