@@ -7,7 +7,8 @@ import {
   BsFillFileEarmarkTextFill,
 } from "react-icons/bs";
 
-import MovieCard from "../components/MovieCard";
+import axios from "axios";
+
 
 import "./Movie.css";
 
@@ -19,13 +20,18 @@ const Movie = () => {
   const [movie, setMovie] = useState(null);
 
   const getMovie = async (url) => {
-    const res = await fetch(url);
-    const data = await res.json();
-    console.log(data);
-    setMovie(data);
+    try {
+      const res = await axios.get(url);
+      setMovie(res.data);
+    } catch (error) {
+      console.error("Houve um erro ao buscar os dados do filme:", error);
+    }
   };
 
   const formatCurrency = (number) => {
+    if (typeof number !== 'number' || number === 0) {
+      return "Não informado";
+    }
     return number.toLocaleString("en-US", {
       style: "currency",
       currency: "USD",
@@ -35,13 +41,15 @@ const Movie = () => {
   useEffect(() => {
     const movieUrl = `${moviesURL}${id}?${apiKey}`;
     getMovie(movieUrl);
-  }, []);
+  }, [id]); 
 
   return (
     <div className="movie-page">
+      {!movie && <p>Carregando...</p>}
       {movie && (
         <>
-          <MovieCard movie={movie} showLink={false} />
+          <img className="movie-poster-detail" src={`https://image.tmdb.org/t/p/w500/${movie.poster_path}`} alt={movie.title} />
+          <h2>{movie.title}</h2>
           <p className="tagline">{movie.tagline}</p>
           <div className="info">
             <h3>

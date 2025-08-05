@@ -1,46 +1,44 @@
+import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import MovieCard from "../components/MovieCard"
+import MovieCard from "../components/MovieCard";
+import axios from "axios";
+
+import './MoviesGrid.css';
 
 const searchURL = import.meta.env.VITE_SEARCH;
 const apiKey = import.meta.env.VITE_API_KEY;
 
-import './MoviesGrid.css';
-import { useState } from "react";
-import { useEffect } from "react";
-
 const Search = () => {
-
   const [searchParams] = useSearchParams();
-
   const [movies, setMovies] = useState([]);
-
   const query = searchParams.get("q");
 
 
   const getSearchedMovies = async (url) => {
-      const res = await fetch(url);
-      const data = await res.json();
-      setMovies(data.results);
+    try {
+      const res = await axios.get(url);
+      setMovies(res.data.results);
+    } catch (error) {
+      console.error("Erro ao realizar a busca:", error);
+    }
   };
   
-  useEffect(() =>{
-  
+  useEffect(() => {
     const searchWithQueryURL = `${searchURL}?${apiKey}&query=${query}`;
     getSearchedMovies(searchWithQueryURL);
-
-  },[query]);
+  }, [query]);
 
   return (
-     <div className="container">
-        <h2 className="title">
-          Resultados para: <span className="query-text">{query}</span>
-        </h2>
-        <div className="movies-container">
-          {movies.length === 0 && <p>Carregando...</p>}   
-          {movies.length > 0 && movies.map((movie) => <MovieCard key={movie.id} movie={movie} />)}
-        </div>
+    <div className="container">
+      <h2 className="title">
+        Resultados para: <span className="query-text">{query}</span>
+      </h2>
+      <div className="movies-container">
+        {movies.length === 0 && <p>Carregando...</p>}   
+        {movies.length > 0 && movies.map((movie) => <MovieCard key={movie.id} movie={movie} />)}
+      </div>
     </div>
   );
 };
 
-export default Search
+export default Search;
