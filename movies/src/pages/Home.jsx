@@ -1,4 +1,3 @@
-// 1. Importar o axios
 import axios from "axios"; 
 import { useState, useEffect } from "react";
 import MovieCard from "../components/MovieCard";

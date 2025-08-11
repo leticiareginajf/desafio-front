@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import MovieCard from "../components/MovieCard";
+import Snackbar from "../components/Snackbar";
 import axios from "axios";
 
 import './MoviesGrid.css';
@@ -13,14 +14,24 @@ const Search = () => {
   const [movies, setMovies] = useState([]);
   const query = searchParams.get("q");
 
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
 
   const getSearchedMovies = async (url) => {
+
+    setIsLoading(true);
+    setError(true);
+
     try {
-      const res = await axios.get(url);
-      setMovies(res.data.results);
-    } catch (error) {
-      console.error("Erro ao realizar a busca:", error);
-    }
+    const res = await axios.get(url);
+    setMovies(res.data.results);
+  } catch (err) {
+    console.error("Erro ao realizar a busca:", err);
+    setError("Ocorreu uma falha ao buscar os resultados.");
+  } finally {
+    setIsLoading(false);
+  }
   };
   
   useEffect(() => {
@@ -31,12 +42,20 @@ const Search = () => {
   return (
     <div className="container">
       <h2 className="title">
-        Resultados para: <span className="query-text">{query}</span>
+        Resultados para: <span className="query-text">{query || "..."}</span>
       </h2>
       <div className="movies-container">
-        {movies.length === 0 && <p>Carregando...</p>}   
-        {movies.length > 0 && movies.map((movie) => <MovieCard key={movie.id} movie={movie} />)}
+        {isLoading && <p>Carregando...</p>}
+        {!isLoading && movies.length > 0 && 
+          movies.map((movie) => <MovieCard key={movie.id} movie={movie} />)}
+        {!isLoading && movies.length === 0 && !error && query &&
+          <p>Nenhum resultado encontrado para "{query}".</p>}
       </div>
+      <Snackbar 
+        show={!!error}
+        message={error}
+        onClose={() => setError(null)}
+      />
     </div>
   );
 };
