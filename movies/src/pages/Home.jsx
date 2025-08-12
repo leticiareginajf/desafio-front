@@ -1,6 +1,7 @@
 import axios from "axios"; 
 import { useState, useEffect } from "react";
 import MovieCard from "../components/MovieCard";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import "./MoviesGrid.css";
 
@@ -9,6 +10,12 @@ const apiKey = import.meta.env.VITE_API_KEY;
 
 const Home = () => {
   const [topMovies, setTopMovies] = useState([]);
+
+
+  const queryClient = new QueryClient();
+
+  //console.log(queryClient);
+
 
   const getTopRateMovies = async (url) => {
     try {
@@ -25,6 +32,8 @@ const Home = () => {
   }, []);
 
   return (
+
+    <QueryClientProvider client={queryClient}>
     <div className="container">
       <h2 className="title">Melhores Filmes:</h2>
       <div className="movies-container">
@@ -33,6 +42,7 @@ const Home = () => {
           topMovies.map((movie) => <MovieCard key={movie.id} movie={movie} />)}
       </div>
     </div>
+    </QueryClientProvider>
   );
 };
 
