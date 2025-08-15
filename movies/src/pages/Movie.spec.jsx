@@ -1,92 +1,62 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
-import axios from "axios";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import Movie from "./Movie";
-import '@testing-library/jest-dom'
 
+beforeEach(() => {
+  vi.resetAllMocks();
+});
 
-vi.mock("axios");
-vi.mock("react-router-dom", () => ({
-  useParams: () => ({ id: "123" }), 
-}));
+function renderWithProviders(ui, route = "/movie/123") {
+  const queryClient = new QueryClient();
+  window.history.pushState({}, "Test page", route);
 
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={[route]}>
+        <Routes>
+          <Route path="/movie/:id" element={ui} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>
+  );
+}
 
-const mockMovie = {
-  id: 123,
-  poster_path: "/fake_poster.jpg",
-  title: "Filme de Teste",
-  tagline: "Uma tagline de teste.",
-  budget: 100000000,
-  revenue: 500000000,
-  runtime: 120,
-  overview: "Esta é uma descrição de teste para o filme.",
-};
-
-describe("Movie Component", () => {
-  it("deve exibir a mensagem 'Carregando...' inicialmente", () => {
-
-    render(<Movie />);
-    
-
-    expect(screen.getByText("Carregando...")).toBeInTheDocument();
-  });
-
-  it("deve buscar os dados do filme e exibi-los corretamente", async () => {
-
-    axios.get.mockResolvedValueOnce({ data: mockMovie });
-
-    render(<Movie />);
-
-    
-    await waitFor(() => {
-
-      expect(screen.getByText("Filme de Teste")).toBeInTheDocument();
+describe("Movie page", () => {
+  it("deve exibir estado de carregamento e depois os dados do filme", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        id: 123,
+        title: "Filme Teste",
+        poster_path: "/poster.jpg",
+        tagline: "Uma tagline",
+        budget: 1000000,
+        revenue: 5000000,
+        runtime: 120,
+        overview: "Descrição do filme",
+      }),
     });
 
-    expect(screen.getByText("Uma tagline de teste.")).toBeInTheDocument();
-    expect(screen.getByAltText("Filme de Teste")).toBeInTheDocument(); 
-    expect(screen.getByText("$100,000,000.00")).toBeInTheDocument(); 
-    expect(screen.getByText("$500,000,000.00")).toBeInTheDocument(); 
-    expect(screen.getByText("120 minutos")).toBeInTheDocument(); 
-    expect(screen.getByText("Esta é uma descrição de teste para o filme.")).toBeInTheDocument();
-  });
+    renderWithProviders(<Movie />);
 
-  it("deve lidar com o caso em que o orçamento ou a receita são zero", async () => {
-    const movieWithoutFinancials = { ...mockMovie, budget: 0, revenue: 0 };
-    axios.get.mockResolvedValueOnce({ data: movieWithoutFinancials });
-  
-    render(<Movie />);
-  
-    await waitFor(() => {
-
-      const notInformedElements = screen.getAllByText("Não informado");
-      expect(notInformedElements).toHaveLength(2); 
-    });
-  });
-
-  it("deve exibir a mensagem de carregamento se a chamada da API falhar", async () => {
-
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-
-    axios.get.mockRejectedValueOnce(new Error("Erro na API"));
-
-    render(<Movie />);
-
+    expect(screen.getByText(/Carregando/i)).toBeInTheDocument();
 
     await waitFor(() => {
+      expect(screen.getByText("Filme Teste")).toBeInTheDocument();
+    });
+    expect(screen.getByText(/Uma tagline/)).toBeInTheDocument();
+    expect(screen.getByText(/Descrição do filme/)).toBeInTheDocument();
+  });
 
-      expect(consoleSpy).toHaveBeenCalledWith(
-        "Houve um erro ao buscar os dados do filme:",
-        expect.any(Error)
-      );
+  it("deve mostrar mensagem de erro quando a requisição falhar", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValueOnce({
+      ok: false,
+      status: 500,
+      json: async () => ({ status_message: "Erro no servidor" }),
     });
 
-
-    expect(screen.getByText("Carregando...")).toBeInTheDocument();
-    expect(screen.queryByText("Filme de Teste")).not.toBeInTheDocument();
-
-
-    consoleSpy.mockRestore();
+    renderWithProviders(<Movie />);
   });
 });

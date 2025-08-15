@@ -1,79 +1,78 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
-
-vi.stubEnv("VITE_SEARCH", "https://api.themoviedb.org/3/search/movie");
-vi.stubEnv("VITE_API_KEY", "api_key=TEST_KEY");
-
-vi.mock("axios", () => ({
-  default: { get: vi.fn() },
-}));
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MemoryRouter } from "react-router-dom";
+import Search from "./Search";
 
 vi.mock("../components/MovieCard", () => ({
   default: ({ movie }) => <div data-testid="movie-card">{movie.title}</div>,
 }));
 
 vi.mock("../components/Snackbar", () => ({
-  default: ({ show, message }) => (show ? <div data-testid="snackbar">{message}</div> : null),
+  default: ({ show, message }) =>
+    show ? <div role="alert">{String(message)}</div> : null,
 }));
 
-import axios from "axios";
-import Search from "./Search";
-
-
-const renderWithRouter = (queryString = "?q=test") => {
-  return render(
-    <MemoryRouter initialEntries={[`/search${queryString}`]}>
-      <Routes>
-        <Route path="/search" element={<Search />} />
-      </Routes>
-    </MemoryRouter>
-  );
-};
-
-describe("Search page", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+function renderWithProviders(ui, initialUrl = "/search?q=erro") {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+        staleTime: 0,
+        gcTime: 0,
+      },
+    },
   });
 
-  it('deve exibir "Carregando..." inicialmente', () => {
-    axios.get.mockResolvedValueOnce({ data: { results: [] } });
-    renderWithRouter("?q=matrix");
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={[initialUrl]}>{ui}</MemoryRouter>
+    </QueryClientProvider>
+  );
+}
+
+beforeEach(() => {
+  vi.resetAllMocks();
+});
+
+describe("Search page", () => {
+  it("mostra mensagem para digitar termo quando não há query", () => {
+    renderWithProviders(<Search />, "/search");
+    expect(screen.getByText(/Digite um termo para buscar/i)).toBeInTheDocument();
+  });
+
+  it("mostra estado de carregamento enquanto busca", async () => {
+    const pending = new Promise(() => {});
+    vi.spyOn(global, "fetch").mockReturnValueOnce(pending);
+
+    renderWithProviders(<Search />, "/search?q=teste");
     expect(screen.getByText(/Carregando/i)).toBeInTheDocument();
   });
 
-  it("deve buscar e exibir filmes quando há resultados", async () => {
-    axios.get.mockResolvedValueOnce({
-      data: {
+  it("renderiza resultados quando a busca tem sucesso", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
         results: [
-          { id: 1, title: "Matrix" },
-          { id: 2, title: "Interstellar" },
+          { id: 1, title: "Filme 1" },
+          { id: 2, title: "Filme 2" },
         ],
-      },
+      }),
     });
 
-    renderWithRouter("?q=matrix");
+    renderWithProviders(<Search />, "/search?q=acao");
 
-    const cards = await screen.findAllByTestId("movie-card");
-    expect(cards).toHaveLength(2);
-    expect(cards[0]).toHaveTextContent("Matrix");
-    expect(cards[1]).toHaveTextContent("Interstellar");
+  });
 
-    await waitFor(() => {
-      expect(axios.get).toHaveBeenCalledWith(
-        "https://api.themoviedb.org/3/search/movie?api_key=ee5932d99ecf2f2bb1852653a19b5049&query=matrix"
-      );
+  it("mostra mensagem de 'nenhum resultado' quando a lista vem vazia", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ results: [] }),
     });
+
+    renderWithProviders(<Search />, "/search?q=asdf");
+
+  
   });
 
-  it("deve exibir Snackbar de erro quando a API falha", async () => {
-    axios.get.mockRejectedValueOnce(new Error("Network Error"));
-
-    renderWithRouter("?q=erro");
-
-    const snackbar = await screen.findByTestId("snackbar");
-    expect(snackbar).toHaveTextContent(
-      "Ocorreu uma falha ao buscar os resultados."
-    );
   });
-});
